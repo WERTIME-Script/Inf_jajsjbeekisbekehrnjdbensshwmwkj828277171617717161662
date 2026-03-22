@@ -1,0 +1,250 @@
+--// SERVICES
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+--// CONFIG
+local OrbitRadius = 5.5     
+local TiltAngle = math.rad(30) 
+local MinYOffset = 2.2     
+
+--// STATE
+local activeConnection = nil
+local activeSmoke = nil
+
+--// UI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "GhostHub_BigHitboxUI"
+ScreenGui.ResetOnSpawn = false
+
+local MainHitbox = Instance.new("TextButton", ScreenGui)
+MainHitbox.Size = UDim2.new(0, 200, 0, 80)
+MainHitbox.Position = UDim2.new(0.05, 0, 0.1, 0)
+MainHitbox.BackgroundTransparency = 1
+MainHitbox.Text = ""
+MainHitbox.Active = true
+MainHitbox.AutoButtonColor = false
+
+local VisualMenu = Instance.new("Frame", MainHitbox)
+VisualMenu.Size = UDim2.new(0, 160, 0, 50)
+VisualMenu.Position = UDim2.new(0.5, -80, 0.5, -25)
+VisualMenu.BackgroundTransparency = 1
+
+local Stroke = Instance.new("UIStroke", VisualMenu)
+Stroke.Color = Color3.fromRGB(0,255,255)
+Stroke.Thickness = 2
+
+local Label = Instance.new("TextLabel", VisualMenu)
+Label.Size = UDim2.new(1,0,1,0)
+Label.BackgroundTransparency = 1
+Label.Text = "ULTRA GHOST"
+Label.TextColor3 = Color3.new(1,1,1)
+Label.Font = Enum.Font.RobotoMono
+Label.TextSize = 13
+
+--// DRAG
+local dragging, dragInput, dragStart, startPos
+
+MainHitbox.InputBegan:Connect(function(input)
+    if not dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+        dragging = true
+        dragInput = input
+        dragStart = input.Position
+        startPos = MainHitbox.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+                dragInput = nil
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        MainHitbox.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+--// TARGET
+local function getTarget()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local closest, dist = nil, math.huge
+
+    for _,v in pairs(workspace:GetDescendants()) do
+        if v:IsA("Model") and v ~= char and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") then
+            if v.Humanoid.Health > 0 then
+
+                local pos, onScreen = Camera:WorldToViewportPoint(v.HumanoidRootPart.Position)
+                if onScreen then
+                    local rayParams = RaycastParams.new()
+                    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+                    rayParams.FilterDescendantsInstances = {char}
+
+                    local ray = workspace:Raycast(Camera.CFrame.Position,
+                        (v.HumanoidRootPart.Position - Camera.CFrame.Position),
+                        rayParams)
+
+                    if ray and ray.Instance and not v:IsAncestorOf(ray.Instance) then
+                        continue
+                    end
+
+                    local mag = (v.HumanoidRootPart.Position - char.HumanoidRootPart.Position).Magnitude
+                    if mag < dist then
+                        dist = mag
+                        closest = v
+                    end
+                end
+            end
+        end
+    end
+
+    return closest
+end
+
+--// SMOKE (DƯỚI CHÂN)
+local function createSmoke(hrp)
+    if activeSmoke then
+        activeSmoke:Destroy()
+        activeSmoke = nil
+    end
+
+    local att = Instance.new("Attachment")
+    att.Parent = hrp
+    att.Position = Vector3.new(0, -2.8, 0) -- 🔥 kéo xuống dưới chân
+
+    local smoke = Instance.new("ParticleEmitter")
+    smoke.Parent = att
+
+    smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
+    smoke.Rate = 140
+    smoke.Lifetime = NumberRange.new(0.35, 0.6)
+    smoke.Speed = NumberRange.new(0.5, 1.2)
+    smoke.Size = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 1.5),
+        NumberSequenceKeypoint.new(1, 3)
+    }
+    smoke.Transparency = NumberSequence.new{
+        NumberSequenceKeypoint.new(0, 0.25),
+        NumberSequenceKeypoint.new(1, 1)
+    }
+    smoke.Color = ColorSequence.new(Color3.fromRGB(180,255,255))
+    smoke.Rotation = NumberRange.new(0,360)
+    smoke.RotSpeed = NumberRange.new(-90,90)
+
+    activeSmoke = att
+end
+
+local function removeSmoke()
+    if activeSmoke then
+        activeSmoke:Destroy()
+        activeSmoke = nil
+    end
+end
+
+--// GHOST
+local function executeGhost(target)
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    local tHRP = target:FindFirstChild("HumanoidRootPart")
+    if not hrp or not tHRP then return end
+
+    if activeConnection then
+        activeConnection:Disconnect()
+        activeConnection = nil
+    end
+
+    createSmoke(hrp) -- 💨 bật khói
+
+    if hum then hum.AutoRotate = false end
+
+    local side = math.random() > 0.5 and 1 or -1
+    local progress = 0
+    local startA = math.atan2(hrp.Position.X - tHRP.Position.X, hrp.Position.Z - tHRP.Position.Z)
+    local sweep = math.rad(450) * side
+
+    local dist = (hrp.Position - tHRP.Position).Magnitude
+    local speed = math.clamp(dist / 450, 0.055, 0.13) * 1.25
+
+    activeConnection = RunService.RenderStepped:Connect(function()
+        if not char.Parent or not tHRP.Parent then
+            if hum then hum.AutoRotate = true end
+            removeSmoke()
+            activeConnection:Disconnect()
+            activeConnection = nil
+            return
+        end
+
+        if progress >= 1 then
+            local backPos = tHRP.CFrame * CFrame.new(0,0,OrbitRadius)
+            hrp.CFrame = CFrame.lookAt(backPos.Position, tHRP.Position)
+
+            if hum then hum.AutoRotate = true end
+            removeSmoke()
+
+            activeConnection:Disconnect()
+            activeConnection = nil
+            return
+        end
+
+        progress = math.min(progress + speed, 1)
+
+        local curA = startA + sweep * progress
+        local rawPos = tHRP.Position + Vector3.new(math.sin(curA)*OrbitRadius,0,math.cos(curA)*OrbitRadius)
+
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = {char, target}
+
+        local ground = workspace:Raycast(rawPos + Vector3.new(0,8,0), Vector3.new(0,-16,0), params)
+        local y = ground and (ground.Position.Y + MinYOffset) or tHRP.Position.Y
+
+        local nextPos = Vector3.new(rawPos.X, y, rawPos.Z)
+
+        if workspace:Raycast(hrp.Position, nextPos - hrp.Position, params) then
+            if hum then hum.AutoRotate = true end
+            removeSmoke()
+            activeConnection:Disconnect()
+            activeConnection = nil
+            return
+        end
+
+        local targetCF =
+            CFrame.lookAt(nextPos, tHRP.Position)
+            * CFrame.Angles(0,0,TiltAngle * side)
+
+        hrp.CFrame = hrp.CFrame:Lerp(targetCF, 0.35)
+    end)
+end
+
+--// CLICK
+MainHitbox.MouseButton1Click:Connect(function()
+    local t = getTarget()
+    if t then executeGhost(t) end
+end)
+
+--// LOCK JUMP
+local function lock()
+    local char = LocalPlayer.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then hum.JumpHeight = 7.2 end
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(lock)
+lock()
