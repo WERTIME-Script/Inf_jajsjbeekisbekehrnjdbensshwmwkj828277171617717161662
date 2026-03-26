@@ -1,0 +1,209 @@
+-- [[ CONFIGURATION ]]
+local hub_display_name = "|•ModX.[WT]~Hub.NBS[TH]"
+local credit_text = "|By.ModX-User~[real_wertime]"
+local discordLink = "https://discord.gg/apk5UcsBz"
+
+-- [[ RAW DATA - TỰ ĐỘNG GOM NHÓM CHUẨN ĐÉT ]]
+local raw_scripts = {
+    {name = "LoopKill~", tab = "TSB", url = "https://gist.githubusercontent.com/WERTIME-Script/33eedbeddb7c3e4e853b19fdedf91ae4/raw/c0593f56e8b1667830dad1a3acea9c0cad652016/Hhggggfrthhgggffthgg"},
+    {name = "Fling.Mode", tab = "Throwing objects and people", url = "https://gist.githubusercontent.com/WERTIME-Script/63c181e3beab018aef6bcd6ddd8cc047/raw/f06d40f5f0fb9dc60c6075de5860e08a3b3c945b/gistfile1.txt"},
+    {name = "ghost.Dash[V4]", tab = "TSB", url = "https://raw.githubusercontent.com/WERTIME-Script/Codex/refs/heads/main/GhostDash_V4"},
+    {name = "Why!no!name", tab = "TSB", url = "https://gist.githubusercontent.com/WERTIME-Script/0bd878c99f1f41a1d705cc90e21a389b/raw/c4f8dce6e4cad7ec8658ca98c7aa2f27591a6b52/I%20love%20you%20I%20like%20u"}
+}
+
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "WERTIME_V23_UPDATED"
+ScreenGui.Parent = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+
+--------------------------------------------------------------------------------
+-- [ NOTIFICATION ]
+--------------------------------------------------------------------------------
+local function ShowNotify()
+    local NF = Instance.new("Frame")
+    NF.Size = UDim2.new(0, 300, 0, 70)
+    NF.Position = UDim2.new(1, 10, 1, -80)
+    NF.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    NF.BorderColor3 = Color3.fromRGB(0, 255, 255)
+    NF.BorderSizePixel = 2
+    NF.Parent = ScreenGui
+    local msg = Instance.new("TextLabel")
+    msg.Size = UDim2.new(1, 0, 1, 0)
+    msg.Text = "Thank for using "..hub_display_name.."\n[ Enjoy your script! ]"
+    msg.TextColor3 = Color3.new(1,1,1)
+    msg.BackgroundTransparency = 1
+    msg.Font = Enum.Font.Code
+    msg.TextSize = 12
+    msg.Parent = NF
+    TweenService:Create(NF, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(1, -310, 1, -80)}):Play()
+    task.delay(4, function()
+        TweenService:Create(NF, TweenInfo.new(0.5, Enum.EasingStyle.Quart), {Position = UDim2.new(1, 10, 1, -80)}):Play()
+        task.wait(0.5) NF:Destroy()
+    end)
+end
+
+--------------------------------------------------------------------------------
+-- [ STICKY DRAG ]
+--------------------------------------------------------------------------------
+local function MakeDraggable(frame)
+    local dragging, dragInput, mousePos, framePos
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true mousePos = input.Position framePos = frame.Position
+            input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+        end
+    end)
+    frame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - mousePos
+            local targetPos = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
+            TweenService:Create(frame, TweenInfo.new(0.08, Enum.EasingStyle.Linear), {Position = targetPos}):Play()
+        end
+    end)
+end
+
+--------------------------------------------------------------------------------
+-- [ MAIN HUB ]
+--------------------------------------------------------------------------------
+local Logo = Instance.new("TextButton")
+Logo.Size = UDim2.new(0, 55, 0, 55)
+Logo.Position = UDim2.new(0.05, 0, 0.15, 0)
+Logo.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Logo.BorderColor3 = Color3.fromRGB(0, 255, 255)
+Logo.BorderSizePixel = 2
+Logo.Text = "WT"
+Logo.TextColor3 = Color3.fromRGB(0, 255, 255)
+Logo.Font = Enum.Font.Code
+Logo.TextSize = 22
+Logo.Parent = ScreenGui
+MakeDraggable(Logo)
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 450, 0, 350)
+Main.Position = UDim2.new(0.5, -225, 0.5, -175)
+Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+Main.BorderColor3 = Color3.fromRGB(0, 255, 255)
+Main.BorderSizePixel = 2
+Main.Parent = ScreenGui
+MakeDraggable(Main)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Position = UDim2.new(0, 10, 0, 5)
+Title.Text = hub_display_name
+Title.TextColor3 = Color3.new(1,1,1)
+Title.BackgroundTransparency = 1
+Title.Font = Enum.Font.Code
+Title.TextSize = 16
+Title.TextXAlignment = 0
+Title.Parent = Main
+
+local Credit = Instance.new("TextLabel")
+Credit.Size = UDim2.new(1, 0, 0, 15)
+Credit.Position = UDim2.new(0, 10, 0, 30)
+Credit.Text = credit_text
+Credit.TextColor3 = Color3.fromRGB(0, 255, 255)
+Credit.TextTransparency = 0.5
+Credit.BackgroundTransparency = 1
+Credit.Font = Enum.Font.Code
+Credit.TextSize = 12
+Credit.TextXAlignment = 0
+Credit.Parent = Main
+
+local TabHolder = Instance.new("ScrollingFrame")
+TabHolder.Size = UDim2.new(1, -20, 0, 40)
+TabHolder.Position = UDim2.new(0, 10, 0, 55)
+TabHolder.BackgroundTransparency = 1
+TabHolder.ScrollBarThickness = 0
+TabHolder.CanvasSize = UDim2.new(2, 0, 0, 0)
+TabHolder.Parent = Main
+local TabList = Instance.new("UIListLayout", TabHolder)
+TabList.FillDirection = Enum.FillDirection.Horizontal
+TabList.Padding = UDim.new(0, 8)
+
+local Container = Instance.new("ScrollingFrame")
+Container.Size = UDim2.new(1, -20, 1, -150)
+Container.Position = UDim2.new(0, 10, 0, 105)
+Container.BackgroundTransparency = 1
+Container.ScrollBarThickness = 2
+Container.Parent = Main
+Instance.new("UIListLayout", Container).Padding = UDim.new(0, 8)
+
+--------------------------------------------------------------------------------
+-- [ AUTO CATEGORY & UNIQUE TABS LOGIC ]
+--------------------------------------------------------------------------------
+local function ClearContainer()
+    for _, child in pairs(Container:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+end
+
+local function LoadCategory(tabName)
+    ClearContainer()
+    for _, script in pairs(raw_scripts) do
+        if string.upper(script.tab) == string.upper(tabName) then
+            local Btn = Instance.new("TextButton")
+            Btn.Size = UDim2.new(1, 0, 0, 40)
+            Btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+            Btn.BorderColor3 = Color3.fromRGB(0, 255, 255)
+            Btn.Text = "[ "..script.name.." ]"
+            Btn.TextColor3 = Color3.fromRGB(0, 255, 255)
+            Btn.Font = Enum.Font.Code
+            Btn.TextSize = 14
+            Btn.Parent = Container
+            Btn.MouseButton1Click:Connect(function()
+                Btn.Text = "--- EXECUTING ---"
+                pcall(function() loadstring(game:HttpGet(script.url))() end)
+                task.wait(1.5) Btn.Text = "[ "..script.name.." ]"
+            end)
+        end
+    end
+end
+
+local tabsCreated = {}
+for _, script in pairs(raw_scripts) do
+    local t = string.upper(script.tab)
+    if not tabsCreated[t] then
+        tabsCreated[t] = true
+        local TabBtn = Instance.new("TextButton")
+        TabBtn.Size = UDim2.new(0, 110, 1, -5)
+        TabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        TabBtn.BorderColor3 = Color3.fromRGB(0, 255, 255)
+        TabBtn.Text = t
+        TabBtn.TextColor3 = Color3.new(1,1,1)
+        TabBtn.Font = Enum.Font.Code
+        TabBtn.TextSize = 10
+        TabBtn.Parent = TabHolder
+        TabBtn.MouseButton1Click:Connect(function() LoadCategory(t) end)
+    end
+end
+
+if #raw_scripts > 0 then LoadCategory(string.upper(raw_scripts[1].tab)) end
+
+--------------------------------------------------------------------------------
+-- [ BUTTON COPY DISCORD ]
+--------------------------------------------------------------------------------
+local CopyBtn = Instance.new("TextButton")
+CopyBtn.Size = UDim2.new(0, 120, 0, 30)
+CopyBtn.Position = UDim2.new(1, -130, 1, -40)
+CopyBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+CopyBtn.BorderColor3 = Color3.fromRGB(0, 255, 255)
+CopyBtn.Text = "[ COPY DISCORD ]"
+CopyBtn.TextColor3 = Color3.fromRGB(0, 255, 255)
+CopyBtn.Font = Enum.Font.Code
+CopyBtn.Parent = Main
+CopyBtn.MouseButton1Click:Connect(function()
+    setclipboard(discordLink)
+    CopyBtn.Text = "COPIED!" task.wait(1) CopyBtn.Text = "[ COPY DISCORD ]"
+end)
+
+local vis = true local r = 0
+Logo.MouseButton1Click:Connect(function()
+    vis = not vis Main.Visible = vis r = r + 540
+    TweenService:Create(Logo, TweenInfo.new(0.3, 5), {Rotation = r}):Play()
+end)
+
+ShowNotify()
