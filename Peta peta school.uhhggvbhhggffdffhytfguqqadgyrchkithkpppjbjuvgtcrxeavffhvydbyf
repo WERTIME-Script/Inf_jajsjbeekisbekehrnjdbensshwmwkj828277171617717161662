@@ -1,0 +1,180 @@
+-- Chống chạy chồng script
+if _G.WerTimeLoaded then return end
+_G.WerTimeLoaded = true
+
+local Players    = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Lighting   = game:GetService("Lighting")
+local CoreGui    = game:GetService("CoreGui")
+local lp         = Players.LocalPlayer
+
+-- Biến lưu trạng thái (Global để hồi sinh tự động nhận lại)
+_G.Settings = {
+    God = false,
+    Noclip = false,
+    Speed = false,
+    NoFog = false,
+    ESPKey = false,
+    ESPPeta = false,
+    WalkVal = 60,
+    Range = 250
+}
+
+-------------------------------------------------
+-- HỆ THỐNG UI (DRAGGABLE + MINIMIZE)
+-------------------------------------------------
+local function CreateUI()
+    if CoreGui:FindFirstChild("WerTime_Master") then CoreGui.WerTime_Master:Destroy() end
+
+    local gui = Instance.new("ScreenGui", CoreGui)
+    gui.Name = "WerTime_Master"
+    gui.ResetOnSpawn = false -- ✅ KHÔNG MẤT KHI CHẾT
+
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.new(0, 220, 0, 280)
+    frame.Position = UDim2.new(0.5, -110, 0.4, 0)
+    frame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+    frame.Active = true
+    frame.Draggable = true 
+    frame.ClipsDescendants = true -- ✅ Để gập gọn không bị lòi nút
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+    local stroke = Instance.new("UIStroke", frame)
+    stroke.Thickness = 1.8
+    RunService.RenderStepped:Connect(function() 
+        stroke.Color = Color3.fromHSV((tick()%5)/5, 1, 1) -- Viền cầu vồng
+    end)
+
+    -- Thanh tiêu đề
+    local title = Instance.new("TextLabel", frame)
+    title.Size = UDim2.new(1, 0, 0, 35)
+    title.Text = "WERTIME - MASTER V7"
+    title.TextColor3 = Color3.new(1, 1, 1)
+    title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    title.Font = Enum.Font.Code
+
+    -- Nút gập gọn (-)
+    local minBtn = Instance.new("TextButton", frame)
+    minBtn.Size = UDim2.new(0, 30, 0, 30)
+    minBtn.Position = UDim2.new(1, -35, 0, 2)
+    minBtn.Text = "-"
+    minBtn.TextColor3 = Color3.new(1, 1, 1)
+    minBtn.BackgroundTransparency = 1
+    minBtn.TextSize = 20
+
+    -- Vùng chứa nút (Content)
+    local content = Instance.new("Frame", frame)
+    content.Size = UDim2.new(1, 0, 1, -35)
+    content.Position = UDim2.new(0, 0, 0, 35)
+    content.BackgroundTransparency = 1
+
+    -- Logic Gập gọn mượt
+    local isMinimized = false
+    minBtn.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        frame:TweenSize(isMinimized and UDim2.new(0, 220, 0, 35) or UDim2.new(0, 220, 0, 280), "Out", "Quart", 0.3, true)
+        content.Visible = not isMinimized
+        minBtn.Text = isMinimized and "+" or "-"
+    end)
+
+    local function makeToggle(text, pos, key)
+        local b = Instance.new("TextButton", content)
+        b.Size = UDim2.new(0.9, 0, 0, 32)
+        b.Position = pos
+        b.Text = text .. (_G.Settings[key] and " : ON" or " : OFF")
+        b.Font = Enum.Font.Code
+        b.TextColor3 = _G.Settings[key] and Color3.fromRGB(0, 255, 255) or Color3.new(1, 1, 1)
+        b.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+        Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+        
+        b.MouseButton1Click:Connect(function()
+            _G.Settings[key] = not _G.Settings[key]
+            b.Text = text .. (_G.Settings[key] and " : ON" or " : OFF")
+            b.TextColor3 = _G.Settings[key] and Color3.fromRGB(0, 255, 255) or Color3.new(1, 1, 1)
+            
+            if key == "NoFog" then
+                Lighting.FogEnd = _G.Settings.NoFog and 100000 or 1000
+                Lighting.ClockTime = _G.Settings.NoFog and 14 or Lighting.ClockTime
+            end
+        end)
+    end
+
+    -- Khởi tạo nút
+    makeToggle("GOD MODE",   UDim2.new(0.05, 0, 0.05, 0), "God")
+    makeToggle("NOCLIP",     UDim2.new(0.05, 0, 0.21, 0), "Noclip")
+    makeToggle("WALKSPEED",  UDim2.new(0.05, 0, 0.37, 0), "Speed")
+    makeToggle("NO FOG/DAY", UDim2.new(0.05, 0, 0.53, 0), "NoFog")
+    makeToggle("ESP KEYS",   UDim2.new(0.05, 0, 0.69, 0), "ESPKey")
+    makeToggle("ESP PETA",   UDim2.new(0.05, 0, 0.85, 0), "ESPPeta")
+end
+
+-------------------------------------------------
+-- LOGIC CORE (KHÔNG LAG)
+-------------------------------------------------
+local function ApplyESP(obj, color)
+    if obj:FindFirstChild("WERTIME_ESP") then return end
+    local h = Instance.new("Highlight", obj)
+    h.Name = "WERTIME_ESP"
+    h.FillColor, h.OutlineColor = color, Color3.new(1, 1, 1)
+    
+    local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+    if root then
+        local target = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+        local a0, a1 = Instance.new("Attachment", root), Instance.new("Attachment", target)
+        local b = Instance.new("Beam", obj)
+        b.Attachment0, b.Attachment1 = a0, a1
+        b.Width0, b.Width1 = 0.005, 0.005 -- ✅ KẺ CHỈ MỎNG
+        b.Color, b.FaceCamera = ColorSequence.new(color), true
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    local char = lp.Character
+    if not char then return end
+    local hrp, hum = char:FindFirstChild("HumanoidRootPart"), char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
+
+    -- God Mode (Invisible Logic)
+    if _G.Settings.God then
+        local oldCF, oldCam = hrp.CFrame, hum.CameraOffset
+        local down = oldCF * CFrame.new(0, -200000, 0)
+        hrp.CFrame, hum.CameraOffset = down, (down:ToObjectSpace(CFrame.new(oldCF.Position))).Position
+        RunService.RenderStepped:Wait()
+        hrp.CFrame, hum.CameraOffset = oldCF, oldCam
+    end
+
+    -- Speed & Noclip
+    if _G.Settings.Speed then hum.WalkSpeed = _G.Settings.WalkVal end
+    if _G.Settings.Noclip then
+        for _, v in pairs(char:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end
+    end
+end)
+
+-- Quét ESP (1.5s/lần)
+task.spawn(function()
+    while task.wait(1.5) do
+        local MyRoot = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
+        if MyRoot and (_G.Settings.ESPKey or _G.Settings.ESPPeta) then
+            if _G.Settings.ESPKey then
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("BasePart") and v.Name:lower():find("key") and (MyRoot.Position - v.Position).Magnitude <= 250 then ApplyESP(v, Color3.new(1, 1, 0)) end
+                end
+            end
+            if _G.Settings.ESPPeta then
+                local folder = workspace:FindFirstChild("Client") and workspace.Client:FindFirstChild("Enemy") and workspace.Client.Enemy:FindFirstChild("ClientEnemy")
+                if folder then
+                    for _, m in ipairs(folder:GetChildren()) do
+                        if m.Name == "EnemyModel" and (MyRoot.Position - (m:FindFirstChildWhichIsA("BasePart") and m:FindFirstChildWhichIsA("BasePart").Position or MyRoot.Position)).Magnitude <= 250 then ApplyESP(m, Color3.new(1, 0, 0)) end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Lệnh gọi lại UI
+lp.Chatted:Connect(function(msg) if msg == ".bot." then CreateUI() end end)
+
+-- Chạy lần đầu
+repeat task.wait() until game:IsLoaded()
+CreateUI()
