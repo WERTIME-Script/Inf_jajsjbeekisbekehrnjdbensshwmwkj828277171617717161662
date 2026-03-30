@@ -1,3 +1,10 @@
+--[[
+anti void 
+idk
+]]--
+loadstring(game:HttpGet("https://raw.githubusercontent.com/WERTIME-Script/Inf_jajsjbeekisbekehrnjdbensshwmwkj828277171617717161662/main/Anti%20void"))()
+
+
 -- [V] TÍN - ĐÃ FIX LỖI MẤT BẢNG PLAYER
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
